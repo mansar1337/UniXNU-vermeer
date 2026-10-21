@@ -1,0 +1,63 @@
+name: XNU source kernel (vermeer build baseline)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xnu-source-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  kernel:
+    runs-on: macos-15
+    timeout-minutes: 180
+    steps:
+      - name: Check out the build configuration
+        uses: actions/checkout@v4
+
+      - name: Check out the pinned UniXNU reference
+        uses: actions/checkout@v4
+        with:
+          repository: UniXNU/UniXNU
+          ref: b6ae99c17194e6a18fd819d3148e69fe405e91fc
+          path: upstream
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install host tools
+        run: |
+          brew install cmake ninja unifdef llvm
+          echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
+
+      - name: Check pins and build configuration
+        run: python3 tools/build_source_kernel.py --unixnu upstream --check
+
+      - name: Build the source kernel and record symbols
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 -u tools/build_source_kernel.py --unixnu upstream --out out --jobs 4 2>&1 | tee out/build-console.log
+
+      - name: Preserve artifacts and logs, including failed builds
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xnu-vermeer-source-${{ github.run_id }}
+          path: |
+            out/build-console.log
+            out/vermeer/kernel/**
+            out/vermeer/logs/**
+            out/vermeer/.config
+            out/vermeer/tree/build/xnu/ios-sym/**
+            out/vermeer/tree/build/corecrypto-2023/build-report*.json
+            out/vermeer/tree/build/libpthread-kernel/build-report.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,25 @@
+# First milestone: source-built kernel and symbols, before the vermeer boot port.
+[board]
+name = "vermeer"
+soc = "SM8550"
+description = "Redmi K70: source-kernel build baseline; phone boot not implemented"
+kit = "vermeer"
+
+[kernel]
+defconfig = "vermeer_build_defconfig"
+archives = [
+  "build-libpthread-kernel.py",
+  "build-corecrypto-14.py",
+  "build-corecrypto-14.py --namespace",
+]
+
+# No [kernel.prelink], [ipsw], [userdata] or [payload] yet: this milestone
+# produces the ordinary source Mach-O, not an iOS or phone boot image.
+
+[firmware]
+config = "vermeer"
+dsc = "Platforms/Xiaomi/vermeerPkg/vermeer.dsc"
+fd = "Build/vermeerPkg/{target}_CLANGPDB/FV/SILICIUM_UEFI.fd"
+
+[firmware.defines]
+DEVICE_MODEL = "vermeer"

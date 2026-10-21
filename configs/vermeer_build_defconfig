@@ -1,0 +1,24 @@
+# UniXNU source-kernel baseline, ARM64 / DEVELOPMENT / BCM2837 / 4 KiB.
+# BCM2837 selects the generic page-table configuration; it does not identify
+# the physical phone as a Raspberry Pi. SM8550 boot support is a later step.
+CONFIG_XNU_SOURCE_CORECRYPTO14=y
+CONFIG_XNU_SOURCE_PTHREAD=y
+CONFIG_XNU_CRYPTO_BOOTSTRAP="source"
+CONFIG_XNU_BUILD_WERROR=0
+CONFIG_XNU_NATIVE_ARCH_TIMER=y
+# Platform/CPU archives require inspection and hardware bring-up first.
+# CONFIG_XNU_ARM_DT_PLATFORM is not set
+# CONFIG_XNU_ARMVIRT_PLATFORM is not set
+# CONFIG_XNU_ARMCPU is not set
+# CONFIG_XNU_NATIVE_UFS is not set
+# CONFIG_XNU_NATIVE_AES is not set
+# CONFIG_XNU_NATIVE_VIRTIO_BLOCK is not set
+# CONFIG_XNU_NATIVE_RAM_BLOCK is not set
+# CONFIG_XNU_NATIVE_MOBILE_DISPLAY is not set
+# CONFIG_XNU_NATIVE_LEGACY_DISPLAY is not set
+# CONFIG_XNU_NATIVE_ADRENO is not set
+# CONFIG_XNU_NATIVE_OFFLINE_GPU is not set
+# CONFIG_XNU_BOOT_PROGRESS is not set
+# CONFIG_XNU_SHENG_PMGR is not set
+# CONFIG_XNU_OWNER_DATA_MOUNT is not set
+# CONFIG_XNU_OWNER_UNION_SYSTEMOS is not set
