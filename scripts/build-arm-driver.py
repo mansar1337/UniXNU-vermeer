@@ -40,7 +40,7 @@ while index < len(arguments):
     index += 1
 command.extend(["-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter",
                 "-Wno-c99-designator", "-Wno-reorder-init-list", "-Wno-deprecated-enum-enum-conversion",
-                "-Wno-unnecessary-virtual-specifier", "-I", str(ROOT / ".cache/xnu-work/osfmk")])
+                "-I", str(ROOT / ".cache/xnu-work/osfmk")])
 (out / "compile-command.json").write_text(json.dumps(command, indent=2) + "\n")
 result = subprocess.run(command, cwd=record["directory"], stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT, text=True)

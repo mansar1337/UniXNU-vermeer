@@ -145,6 +145,20 @@ The existing Silicium port supplies stock-derived memory/DT information
 and working UEFI display/storage. Active framebuffer address, stride,
 runtime RAM and CPU entry state need measurement before phone boot.
 
+`tools/make_vermeer_adt.py` generates a single-CPU Apple-format tree from
+stock GIC regions/stride, Kryo compatibility and the 19.2 MHz timer. It
+requires explicit observed DRAM size, boot MPIDR affinity, CNTFRQ and
+available owned-memory window; it does not use sheng's CPU topology or
+Apple identity. Encoding and the ArmCpu ranges/reg contract are tested.
+
+`tools/prepare_uefi_probe.py --uefi /path/to/Mu-Silicium` creates a separate
+`vermeerProbePkg` based on the working vermeer port. It embeds the small
+CPU/GOP/free-memory probe and selects it as the platform boot option.
+Build with `python3 build_uefi.py -d vermeerProbe -r DEBUG -m 0`.
+The probe displays CPU registers, GOP values and largest free window;
+it keeps boot services active and accesses no disks. Any key returns to
+UEFI; a power cycle returns to fastboot. This probe does not run XNU.
+
 No workflow here runs fastboot, builds userdata or installs iOS. There is
 no phone flash command. The current Silicium images remain separate.
 
