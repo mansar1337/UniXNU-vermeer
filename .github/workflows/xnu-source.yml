@@ -2,6 +2,12 @@ name: XNU source kernel (vermeer build baseline)
 
 on:
   workflow_dispatch:
+    inputs:
+      profile:
+        description: Source baseline or minimal CPU/platform kernel
+        type: choice
+        options: [source, platform]
+        default: source
 
 permissions:
   contents: read
@@ -36,16 +42,20 @@ jobs:
           echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
 
       - name: Check pins and build configuration
+        env:
+          BUILD_PROFILE: ${{ inputs.profile || 'source' }}
         run: |
           python3 -m unittest discover -s tests -v
-          python3 tools/build_source_kernel.py --unixnu upstream --check
+          python3 tools/build_source_kernel.py --unixnu upstream --profile "$BUILD_PROFILE" --check
 
       - name: Build the source kernel and record symbols
         shell: bash
+        env:
+          BUILD_PROFILE: ${{ inputs.profile || 'source' }}
         run: |
           set -euo pipefail
           mkdir -p out
-          python3 -u tools/build_source_kernel.py --unixnu upstream --out out --jobs 4 2>&1 | tee out/build-console.log
+          python3 -u tools/build_source_kernel.py --unixnu upstream --out out --jobs 4 --profile "$BUILD_PROFILE" 2>&1 | tee out/build-console.log
 
       - name: Preserve artifacts and logs, including failed builds
         if: always()
@@ -60,6 +70,8 @@ jobs:
             out/vermeer/tree/build/xnu/ios-sym/**
             out/vermeer/tree/build/corecrypto-2023/build-report*.json
             out/vermeer/tree/build/libpthread-kernel/build-report.json
+            out/vermeer/tree/build/armcpu/**
+            out/vermeer/tree/build/armdt-platform/**
             out/vermeer/tree/.cache/vermeer-patch-report.json
           include-hidden-files: true
           if-no-files-found: warn

@@ -127,8 +127,20 @@ Runtime crypto selftests and phone boot remain untested.
 
 ## Next port milestone
 
-Inspect `UniXNU-sheng` (same SM8550 SoC), `ArmCpu`, `ArmDTPlatform` and
-`DarwinBoot`; add the minimal CPU/platform archives and a vermeer ADT.
+The workflow now has a `platform` profile that links the pinned ArmCpu and
+ArmDTPlatform drivers and enables the architectural timer. It still omits
+all block/storage, GPU, touch and sheng power drivers. The default `source`
+profile preserves the previous build configuration. Select the profile
+when manually dispatching Actions, or pass `--profile platform` to the
+build wrapper. The collector checks CPU/platform observation symbols and
+records the selected profile and linked-driver status.
+
+The driver archive recipe is adapted from UniXNU-sheng
+`0c2046b84dbee545e7e3923eb74d7bb1ce020978`, with the upstream license
+retained in `licenses/UniXNU-sheng.txt`. CPU/platform drivers come from the
+unchanged UniXNU gitlinks, not the latest branch of those repositories.
+
+Prepare a vermeer ADT and validate the DarwinBoot handoff next.
 The existing Silicium port supplies stock-derived memory/DT information
 and working UEFI display/storage. Active framebuffer address, stride,
 runtime RAM and CPU entry state need measurement before phone boot.

@@ -97,7 +97,7 @@ def preflight():
     subprocess.run(["xcrun", "--sdk", "iphoneos", "--show-sdk-path"], check=True)
 
 
-def verify_configuration(parsed):
+def verify_configuration(parsed, profile="source"):
     # Match upstream's dependency check before fetching or preparing SDKs.
     if parsed.get("XNU_NATIVE_ARCH_TIMER", parsed.get("XNU_ARMCPU", False)) and not parsed.get("XNU_ARMCPU", False):
         raise ValueError("XNU_NATIVE_ARCH_TIMER requires XNU_ARMCPU; disable the timer entry for the source-build baseline")
@@ -105,8 +105,16 @@ def verify_configuration(parsed):
         raise ValueError("Source crypto and pthread are required by this baseline")
     if parsed.get("XNU_CRYPTO_BOOTSTRAP") != "source":
         raise ValueError("This milestone must not depend on prelinked Apple crypto")
+    allowed = {"XNU_SOURCE_CORECRYPTO14", "XNU_SOURCE_PTHREAD"}
+    if profile == "platform":
+        required = {"XNU_ARM_DT_PLATFORM", "XNU_ARMCPU", "XNU_NATIVE_ARCH_TIMER"}
+        if not all(parsed.get(name) is True for name in required):
+            raise ValueError("Platform profile requires ArmDTPlatform, ArmCpu and native architectural timer")
+        allowed |= required
+    elif profile != "source":
+        raise ValueError(f"Unknown build profile: {profile}")
     for name, value in parsed.items():
-        if value is True and name not in {"XNU_SOURCE_CORECRYPTO14", "XNU_SOURCE_PTHREAD"}:
+        if value is True and name not in allowed:
             raise ValueError(f"Unexpected feature in build-only baseline: {name}")
 
 
@@ -115,6 +123,7 @@ def main():
     parser.add_argument("--unixnu", type=Path, required=True)
     parser.add_argument("--out", type=Path, default=Path("out"))
     parser.add_argument("--jobs", type=int, default=4)
+    parser.add_argument("--profile", choices=("source", "platform"), default="source")
     parser.add_argument("--check", action="store_true", help="Check source/configuration only; works on Linux")
     args = parser.parse_args()
     if args.jobs < 1:
@@ -127,12 +136,16 @@ def main():
     cli = importlib.import_module("unixnu.cli")
     config = importlib.import_module("unixnu.config")
     kernel = importlib.import_module("unixnu.kernel")
-    parsed = config.parse_config((device / "configs/vermeer_build_defconfig").read_text())
+    configuration = f"configs/vermeer_{'platform' if args.profile == 'platform' else 'build'}_defconfig"
+    parsed = config.parse_config((device / configuration).read_text())
     archives = tomllib.loads((device / "board.toml").read_text())["kernel"]["archives"]
+    archives = list(archives)
+    if args.profile == "platform":
+        archives += ["build-arm-driver.py ArmDTPlatform", "build-arm-driver.py ArmCpu"]
     for builder in archives:
-        if not (root / "scripts" / builder.split()[0]).is_file():
+        if not any((base / "scripts" / builder.split()[0]).is_file() for base in (root, device)):
             raise ValueError(f"Unknown archive builder: {builder}")
-    verify_configuration(parsed)
+    verify_configuration(parsed, args.profile)
     print(f"Verified UniXNU {UNIXNU_COMMIT}, XNU {XNU_COMMIT}, source-build configuration", flush=True)
     if args.check:
         return 0
@@ -145,8 +158,9 @@ def main():
     ])
     ctx = config.Context(options)
     ctx.work.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(device / "configs/vermeer_build_defconfig", ctx.config_path)
+    shutil.copyfile(device / configuration, ctx.config_path)
     ctx.config = parsed
+    ctx.board["kernel"]["archives"] = archives
     modules = cli.prepare(ctx, ["kernel"])
     patch_report = prepare_patches(root, ctx.tree)
     (ctx.tree / ".cache/vermeer-patch-report.json").write_text(json.dumps(patch_report, indent=2) + "\n")
@@ -164,6 +178,10 @@ def main():
     for required in ("_source_corecrypto14_bootstrap", "_source_pthread_bootstrap"):
         if required not in symbol_names:
             raise ValueError(f"Kernel is missing {required}")
+    if args.profile == "platform":
+        for required in ("_armdt_platform_configured", "_armcpu_registered", "_armcpu_gic_ready", "_armcpu_timer_interrupts"):
+            if required not in symbol_names:
+                raise ValueError(f"Platform kernel is missing {required}")
     seal = source_kernel.with_suffix(source_kernel.suffix + ".crypto-hmac.json")
     if not seal.is_file():
         raise ValueError("Source crypto POST HMAC report is missing")
@@ -183,11 +201,12 @@ def main():
         "configuration": parsed, "board": "vermeer", "soc": "SM8550",
         "build_configuration_sha256": {
             name: sha256(device / name)
-            for name in ("board.toml", "configs/vermeer_build_defconfig", "tools/build_source_kernel.py", "tools/prepare_kernel_patches.py")
+            for name in ("board.toml", configuration, "tools/build_source_kernel.py", "tools/prepare_kernel_patches.py", "scripts/build-arm-driver.py")
         },
+        "profile": args.profile,
         "machine_configuration": "BCM2837", "page_bytes": 4096,
         "prelinked": False, "bootable_phone_image": False,
-        "hardware_boot_tested": False, "vermeer_platform_cpu_drivers_linked": False,
+        "hardware_boot_tested": False, "vermeer_platform_cpu_drivers_linked": args.profile == "platform",
         "source_crypto_runtime_selftests_executed": False,
     })
     (destination / "build-report.json").write_text(json.dumps(report, indent=2) + "\n")

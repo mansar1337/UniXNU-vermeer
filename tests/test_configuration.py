@@ -36,6 +36,20 @@ class ConfigurationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unexpected feature.*XNU_NATIVE_UFS"):
             BUILD.verify_configuration(self.baseline)
 
+    def test_platform_requires_all_interrupt_providers(self):
+        with self.assertRaisesRegex(ValueError, "Platform profile requires"):
+            BUILD.verify_configuration(self.baseline, "platform")
+        self.baseline.update(XNU_ARM_DT_PLATFORM=True, XNU_ARMCPU=True, XNU_NATIVE_ARCH_TIMER=True)
+        BUILD.verify_configuration(self.baseline, "platform")
+
+    def test_platform_profile_rejects_storage_and_board_power(self):
+        self.baseline.update(XNU_ARM_DT_PLATFORM=True, XNU_ARMCPU=True, XNU_NATIVE_ARCH_TIMER=True)
+        for feature in ("XNU_NATIVE_UFS", "XNU_OWNER_DATA_MOUNT", "XNU_SHENG_PMGR"):
+            with self.subTest(feature=feature):
+                invalid = dict(self.baseline, **{feature: True})
+                with self.assertRaisesRegex(ValueError, "Unexpected feature"):
+                    BUILD.verify_configuration(invalid, "platform")
+
 
 if __name__ == "__main__":
     unittest.main()
