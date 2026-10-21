@@ -60,6 +60,7 @@ jobs:
             out/vermeer/tree/build/xnu/ios-sym/**
             out/vermeer/tree/build/corecrypto-2023/build-report*.json
             out/vermeer/tree/build/libpthread-kernel/build-report.json
+            out/vermeer/tree/.cache/vermeer-patch-report.json
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14

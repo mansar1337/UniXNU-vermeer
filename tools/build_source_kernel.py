@@ -17,6 +17,8 @@ import subprocess
 import sys
 import tomllib
 
+from prepare_kernel_patches import guarded_patch, prepare as prepare_patches
+
 UNIXNU_COMMIT = "b6ae99c17194e6a18fd819d3148e69fe405e91fc"
 XNU_COMMIT = "d8b80295118ef25ac3a784134bcf95cd8e88109f"
 KERNEL = "build/xnu/ios-obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837.unstripped.noctf"
@@ -120,6 +122,7 @@ def main():
     root = args.unixnu.resolve()
     device = Path(__file__).resolve().parents[1]
     verify_source(root)
+    guarded_patch((root / "patches/xnu/offline-component-load-probes.patch").read_bytes())
     sys.path.insert(0, str(root / "scripts"))
     cli = importlib.import_module("unixnu.cli")
     config = importlib.import_module("unixnu.config")
@@ -145,6 +148,8 @@ def main():
     shutil.copyfile(device / "configs/vermeer_build_defconfig", ctx.config_path)
     ctx.config = parsed
     modules = cli.prepare(ctx, ["kernel"])
+    patch_report = prepare_patches(root, ctx.tree)
+    (ctx.tree / ".cache/vermeer-patch-report.json").write_text(json.dumps(patch_report, indent=2) + "\n")
     kernel.build(ctx, modules)
     source_kernel = ctx.tree / KERNEL
     report = verify_kernel(source_kernel)
@@ -174,10 +179,11 @@ def main():
     report.update({
         "unixnu_commit": UNIXNU_COMMIT, "xnu_commit": XNU_COMMIT,
         "modules": revisions, "submodules": submodules,
+        "local_kernel_patch": patch_report,
         "configuration": parsed, "board": "vermeer", "soc": "SM8550",
         "build_configuration_sha256": {
             name: sha256(device / name)
-            for name in ("board.toml", "configs/vermeer_build_defconfig", "tools/build_source_kernel.py")
+            for name in ("board.toml", "configs/vermeer_build_defconfig", "tools/build_source_kernel.py", "tools/prepare_kernel_patches.py")
         },
         "machine_configuration": "BCM2837", "page_bytes": 4096,
         "prelinked": False, "bootable_phone_image": False,

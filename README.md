@@ -94,6 +94,20 @@ dependency before fetching/building. No upstream dependency check was
 removed. This change has passed local configuration regression checks;
 full compile/link success remains unverified until the next macOS run.
 
+[Run 39616227056](https://github.com/mansar1337/UniXNU-vermeer/actions/runs/39616227056)
+on commit `28efe79` compiled XNU and the source pthread/crypto archives.
+Both 529-source crypto passes had zero compile failures. Final linking
+stopped at `_native_legacy_display_probe`: an upstream optional display
+probe was referenced even though its driver was disabled.
+
+The build now copies the pinned kernel patches into its local build tree
+and guards that registration block with `XNU_NATIVE_LEGACY_DISPLAY`, just
+like the other legacy display call. The upstream checkout stays unchanged;
+the input patch hash is checked and the effective patch hash is recorded.
+A compile/symbol regression check proves the reference is absent when
+the feature is disabled and present when enabled. Full linking still needs
+the next macOS run.
+
 ## Next port milestone
 
 Inspect `UniXNU-sheng` (same SM8550 SoC), `ArmCpu`, `ArmDTPlatform` and
