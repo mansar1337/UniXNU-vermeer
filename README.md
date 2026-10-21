@@ -1,11 +1,11 @@
 # XNU source build for the vermeer port
 
-This repository prepares the first build milestone for Redmi K70 (SM8550):
+This repository completed the first build milestone for Redmi K70 (SM8550):
 a source-built ARM64 XNU Mach-O with symbols, using the pinned UniXNU build
-driver. **No kernel has been built by this repository yet.** The first
-macOS run fetched the pinned sources, prepared headers and built
-`libfirehose_kernel`, then stopped on a configuration dependency before
-the source-kernel compile pass. The corrected configuration needs a rerun.
+driver. [Run 39630167656](https://github.com/mansar1337/UniXNU-vermeer/actions/runs/39630167656)
+on commit `58e31c79db44e0f0e4e3917d7823ee69d4501150` passed compilation,
+final linking and collection. The downloaded artifact was independently
+checked for format, source-provider symbols, SHA-256 and POST HMAC.
 
 The result is a build baseline, not a phone boot image. It selects UniXNU's
 generic BCM2837/4 KiB machine configuration. The name is the upstream page
@@ -91,8 +91,8 @@ Architectural timer entry requires the actual ArmCpu interrupt provider
 The initial configuration enabled `XNU_NATIVE_ARCH_TIMER` while disabling
 `XNU_ARMCPU`. The source-build baseline now disables both and checks this
 dependency before fetching/building. No upstream dependency check was
-removed. This change has passed local configuration regression checks;
-full compile/link success remains unverified until the next macOS run.
+removed. The configuration regression checks and subsequent macOS
+compile/link passed.
 
 [Run 39616227056](https://github.com/mansar1337/UniXNU-vermeer/actions/runs/39616227056)
 on commit `28efe79` compiled XNU and the source pthread/crypto archives.
@@ -105,8 +105,25 @@ and guards that registration block with `XNU_NATIVE_LEGACY_DISPLAY`, just
 like the other legacy display call. The upstream checkout stays unchanged;
 the input patch hash is checked and the effective patch hash is recorded.
 A compile/symbol regression check proves the reference is absent when
-the feature is disabled and present when enabled. Full linking still needs
-the next macOS run.
+the feature is disabled and present when enabled. The third macOS run
+passed the final link and collector; its source kernel has no reference
+to the disabled display probe.
+
+Successful result:
+
+- XNU 10063.141.1 / Darwin 23.6.0, DEVELOPMENT, ARM64, 4 KiB pages.
+- `kernel.development.vermeer-build.macho`: 21,376,600 bytes.
+- Kernel SHA-256:
+  `a06ef5334d95c00b677ffaa2320868a684abbc4fe6f2e4c4c2a040b8c57edf04`.
+- Artifact ZIP SHA-256:
+  `80deac3818820448dbefb0008b5077ff5c5342e47a5f5b50cb311b5283887e36`.
+- Crypto plain/namespaced builds: 529 C sources each, zero failures.
+
+The final build succeeded with compiler/linker warnings. The earlier
+bootstrap pass intentionally stops at linking before source archives are
+built; errors in that bootstrap log are not the final build result.
+Source-provider HMAC bytes were recomputed locally and match the report.
+Runtime crypto selftests and phone boot remain untested.
 
 ## Next port milestone
 
