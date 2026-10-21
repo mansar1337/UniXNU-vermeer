@@ -2,14 +2,18 @@
 
 This repository prepares the first build milestone for Redmi K70 (SM8550):
 a source-built ARM64 XNU Mach-O with symbols, using the pinned UniXNU build
-driver. **No kernel has been built by this repository yet.** The workflow
-has been checked locally; its first macOS run is still required.
+driver. **No kernel has been built by this repository yet.** The first
+macOS run fetched the pinned sources, prepared headers and built
+`libfirehose_kernel`, then stopped on a configuration dependency before
+the source-kernel compile pass. The corrected configuration needs a rerun.
 
 The result is a build baseline, not a phone boot image. It selects UniXNU's
 generic BCM2837/4 KiB machine configuration. The name is the upstream page
 layout configuration, not a claim that the phone has Broadcom hardware.
 SM8550 CPU/platform archives, Apple-format device tree and the loader
 handoff remain future work. UFS, GPU and touch drivers are disabled.
+The architectural timer entry is also disabled until ArmCpu is linked;
+enabling it without the interrupt provider is rejected by the local check.
 
 ## Pinned basis
 
@@ -74,6 +78,21 @@ python3 tools/build_source_kernel.py --unixnu ../sources/UniXNU --check
 The collector requires an iOS 17 ARM64 Mach-O with an entry command,
 source crypto and pthread symbols, and a matching HMAC report. Compile,
 link or collection failure fails the job; it is not reported as success.
+
+## Build results
+
+[Run 39614669422](https://github.com/mansar1337/UniXNU-vermeer/actions/runs/39614669422)
+on commit `4d8bb69` failed with:
+
+```text
+Architectural timer entry requires the actual ArmCpu interrupt provider
+```
+
+The initial configuration enabled `XNU_NATIVE_ARCH_TIMER` while disabling
+`XNU_ARMCPU`. The source-build baseline now disables both and checks this
+dependency before fetching/building. No upstream dependency check was
+removed. This change has passed local configuration regression checks;
+full compile/link success remains unverified until the next macOS run.
 
 ## Next port milestone
 

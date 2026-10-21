@@ -5,7 +5,8 @@ CONFIG_XNU_SOURCE_CORECRYPTO14=y
 CONFIG_XNU_SOURCE_PTHREAD=y
 CONFIG_XNU_CRYPTO_BOOTSTRAP="source"
 CONFIG_XNU_BUILD_WERROR=0
-CONFIG_XNU_NATIVE_ARCH_TIMER=y
+# The architectural timer entry requires ArmCpu's interrupt provider.
+# CONFIG_XNU_NATIVE_ARCH_TIMER is not set
 # Platform/CPU archives require inspection and hardware bring-up first.
 # CONFIG_XNU_ARM_DT_PLATFORM is not set
 # CONFIG_XNU_ARMVIRT_PLATFORM is not set

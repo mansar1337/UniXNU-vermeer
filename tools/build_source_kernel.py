@@ -95,6 +95,19 @@ def preflight():
     subprocess.run(["xcrun", "--sdk", "iphoneos", "--show-sdk-path"], check=True)
 
 
+def verify_configuration(parsed):
+    # Match upstream's dependency check before fetching or preparing SDKs.
+    if parsed.get("XNU_NATIVE_ARCH_TIMER", parsed.get("XNU_ARMCPU", False)) and not parsed.get("XNU_ARMCPU", False):
+        raise ValueError("XNU_NATIVE_ARCH_TIMER requires XNU_ARMCPU; disable the timer entry for the source-build baseline")
+    if not parsed.get("XNU_SOURCE_CORECRYPTO14") or not parsed.get("XNU_SOURCE_PTHREAD"):
+        raise ValueError("Source crypto and pthread are required by this baseline")
+    if parsed.get("XNU_CRYPTO_BOOTSTRAP") != "source":
+        raise ValueError("This milestone must not depend on prelinked Apple crypto")
+    for name, value in parsed.items():
+        if value is True and name not in {"XNU_SOURCE_CORECRYPTO14", "XNU_SOURCE_PTHREAD"}:
+            raise ValueError(f"Unexpected feature in build-only baseline: {name}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--unixnu", type=Path, required=True)
@@ -116,13 +129,7 @@ def main():
     for builder in archives:
         if not (root / "scripts" / builder.split()[0]).is_file():
             raise ValueError(f"Unknown archive builder: {builder}")
-    if not parsed["XNU_SOURCE_CORECRYPTO14"] or not parsed["XNU_SOURCE_PTHREAD"]:
-        raise ValueError("Source crypto and pthread are required by this baseline")
-    if parsed["XNU_CRYPTO_BOOTSTRAP"] != "source":
-        raise ValueError("This milestone must not depend on prelinked Apple crypto")
-    for name, value in parsed.items():
-        if value is True and name not in {"XNU_SOURCE_CORECRYPTO14", "XNU_SOURCE_PTHREAD", "XNU_NATIVE_ARCH_TIMER"}:
-            raise ValueError(f"Unexpected feature in build-only baseline: {name}")
+    verify_configuration(parsed)
     print(f"Verified UniXNU {UNIXNU_COMMIT}, XNU {XNU_COMMIT}, source-build configuration", flush=True)
     if args.check:
         return 0

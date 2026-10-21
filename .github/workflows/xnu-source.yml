@@ -36,7 +36,9 @@ jobs:
           echo "$(brew --prefix llvm)/bin" >> "$GITHUB_PATH"
 
       - name: Check pins and build configuration
-        run: python3 tools/build_source_kernel.py --unixnu upstream --check
+        run: |
+          python3 -m unittest discover -s tests -v
+          python3 tools/build_source_kernel.py --unixnu upstream --check
 
       - name: Build the source kernel and record symbols
         shell: bash
